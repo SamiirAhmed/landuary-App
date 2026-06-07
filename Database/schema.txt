@@ -1,0 +1,590 @@
+CREATE DATABASE IF NOT EXISTS laundry_system;
+USE laundry_system;
+
+-- 1. PARENT TABLES
+
+CREATE TABLE cities (
+    city_id INT AUTO_INCREMENT PRIMARY KEY,
+    city_name VARCHAR(100) NOT NULL UNIQUE,
+    status ENUM('Active','Inactive') DEFAULT 'Active'
+);
+
+CREATE TABLE districts (
+    district_id INT AUTO_INCREMENT PRIMARY KEY,
+    city_id INT NOT NULL,
+    district_name VARCHAR(100) NOT NULL,
+    status ENUM('Active','Inactive') DEFAULT 'Active',
+
+    FOREIGN KEY (city_id) REFERENCES cities(city_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE people (
+    person_id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NOT NULL UNIQUE,
+    sex ENUM('Male','Female') NOT NULL,
+    email VARCHAR(150) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE services (
+    service_id INT AUTO_INCREMENT PRIMARY KEY,
+    service_name VARCHAR(100) NOT NULL,
+    price_type ENUM('Per Item','Per Kg','Fixed') NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    description TEXT,
+    status ENUM('Active','Inactive') DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE cloth_types (
+    cloth_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    cloth_name VARCHAR(100) NOT NULL UNIQUE,
+    status ENUM('Active','Inactive') DEFAULT 'Active'
+);
+
+-- 2. CHILD TABLES
+
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    person_id INT NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('Admin','Customer','Staff','Delivery') NOT NULL,
+    status ENUM('Active','Inactive') DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (person_id) REFERENCES people(person_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE TABLE customers (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    city_id INT NOT NULL,
+    district_id INT NOT NULL,
+    register_date DATE DEFAULT (CURRENT_DATE),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (city_id) REFERENCES cities(city_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (district_id) REFERENCES districts(district_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE staff (
+    staff_id INT AUTO_INCREMENT PRIMARY KEY,
+    person_id INT NOT NULL,
+    user_id INT NULL,
+    position VARCHAR(100) NOT NULL,
+    salary DECIMAL(10,2) DEFAULT 0.00,
+    hire_date DATE,
+    status ENUM('Active','Inactive') DEFAULT 'Active',
+
+    FOREIGN KEY (person_id) REFERENCES people(person_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+CREATE TABLE orders (
+    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    pickup_address TEXT NOT NULL,
+    pickup_date DATE,
+    total_amount DECIMAL(10,2) DEFAULT 0.00,
+    order_status ENUM(
+        'Pending',
+        'Accepted',
+        'Picked Up',
+        'Washing',
+        'Ironing',
+        'Ready',
+        'Delivered',
+        'Cancelled'
+    ) DEFAULT 'Pending',
+    payment_status ENUM('Unpaid','Partial','Paid') DEFAULT 'Unpaid',
+    special_notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE order_items (
+    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    service_id INT NOT NULL,
+    cloth_type_id INT NOT NULL,
+    quantity INT DEFAULT 1,
+    weight DECIMAL(10,2) DEFAULT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    notes TEXT,
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (service_id) REFERENCES services(service_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (cloth_type_id) REFERENCES cloth_types(cloth_type_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    amount_paid DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('Cash','EVC Plus','Zaad','Card','Bank') NOT NULL,
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    payment_note TEXT,
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE TABLE pickup_delivery (
+    pickup_delivery_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL UNIQUE,
+    delivery_user_id INT NULL,
+    pickup_status ENUM('Pending','Picked Up') DEFAULT 'Pending',
+    delivery_status ENUM('Pending','Delivered') DEFAULT 'Pending',
+    pickup_date DATETIME,
+    delivery_date DATETIME,
+    notes TEXT,
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (delivery_user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+CREATE TABLE order_tracking (
+    tracking_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    old_status VARCHAR(50),
+    new_status VARCHAR(50) NOT NULL,
+    changed_by INT NULL,
+    remarks TEXT,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (changed_by) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+CREATE TABLE notifications (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE TABLE expenses (
+    expense_id INT AUTO_INCREMENT PRIMARY KEY,
+    expense_title VARCHAR(150) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    expense_date DATE NOT NULL,
+    description TEXT,
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+-- 3. INSERT DEFAULT DATA
+
+INSERT INTO cities (city_name)
+VALUES ('Mogadishu');
+
+INSERT INTO districts (city_id, district_name)
+VALUES
+(1, 'Abdiaziz'),
+(1, 'Bondhere'),
+(1, 'Daynile'),
+(1, 'Dharkenley'),
+(1, 'Hamar-Jajab'),
+(1, 'Hamar-Weyne'),
+(1, 'Hodan'),
+(1, 'Howl-Wadag'),
+(1, 'Huriwa'),
+(1, 'Kaxda'),
+(1, 'Karan'),
+(1, 'Shangani'),
+(1, 'Shibis'),
+(1, 'Waberi'),
+(1, 'Wadajir'),
+(1, 'Warta Nabada'),
+(1, 'Yaqshid');
+
+
+
+
+INSERT INTO cloth_types (cloth_name)
+VALUES
+('Shaati'),
+('Surwaal'),
+('Suudh'),
+('Dirac'),
+('Go\' Bustayaal'),
+('Jaakad'),
+('Goono'),
+('Cabaaya'),
+('Daah');
+
+INSERT INTO services (service_name, price_type, price, description)
+VALUES
+('Dhaqid', 'Per Item', 1.00, 'Adeegga dhaqidda dharka'),
+('Feerayn', 'Per Item', 0.50, 'Adeegga feeraynta dharka'),
+('Dhaqid iyo Feerayn', 'Per Item', 1.50, 'Adeegga dhaqid iyo feerayn isku jira'),
+('Nadiifin Gaar ah', 'Per Item', 3.00, 'Adeegga dry cleaning'),
+('Dhaqid Kiilo', 'Per Kg', 2.00, 'Adeeg dhaqid oo lagu xisaabiyo kiilo');
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_register_customer(
+    IN p_full_name VARCHAR(150),
+    IN p_phone VARCHAR(30),
+    IN p_sex ENUM('Male','Female'),
+    IN p_email VARCHAR(150),
+    IN p_city_id INT,
+    IN p_district_id INT,
+    IN p_password VARCHAR(255),
+    IN p_confirm_password VARCHAR(255)
+)
+BEGIN
+    DECLARE v_person_id INT;
+    DECLARE v_user_id INT;
+
+    IF p_password <> p_confirm_password THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Password and confirm password do not match';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM people WHERE phone = p_phone) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Phone number already exists';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM people WHERE email = p_email) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Email already exists';
+    END IF;
+
+    INSERT INTO people (full_name, phone, sex, email)
+    VALUES (p_full_name, p_phone, p_sex, p_email);
+
+    SET v_person_id = LAST_INSERT_ID();
+
+    INSERT INTO users (person_id, password, role, status)
+    VALUES (v_person_id, p_password, 'Customer', 'Active');
+
+    SET v_user_id = LAST_INSERT_ID();
+
+    INSERT INTO customers (user_id, city_id, district_id, register_date)
+    VALUES (v_user_id, p_city_id, p_district_id, CURDATE());
+END$$
+
+CREATE PROCEDURE sp_register_staff(
+    IN p_full_name VARCHAR(150),
+    IN p_phone VARCHAR(30),
+    IN p_sex ENUM('Male','Female'),
+    IN p_email VARCHAR(150),
+    IN p_has_login TINYINT,
+    IN p_password VARCHAR(255),
+    IN p_confirm_password VARCHAR(255),
+    IN p_role ENUM('Staff','Delivery'),
+    IN p_position VARCHAR(100),
+    IN p_salary DECIMAL(10,2),
+    IN p_hire_date DATE
+)
+BEGIN
+    DECLARE v_person_id INT;
+    DECLARE v_user_id INT DEFAULT NULL;
+
+    IF p_has_login = 1 AND p_password <> p_confirm_password THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Password and confirm password do not match';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM people WHERE phone = p_phone) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Phone number already exists';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM people WHERE email = p_email) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Email already exists';
+    END IF;
+
+    INSERT INTO people (full_name, phone, sex, email)
+    VALUES (p_full_name, p_phone, p_sex, p_email);
+
+    SET v_person_id = LAST_INSERT_ID();
+
+    IF p_has_login = 1 THEN
+        INSERT INTO users (person_id, password, role, status)
+        VALUES (v_person_id, p_password, p_role, 'Active');
+
+        SET v_user_id = LAST_INSERT_ID();
+    END IF;
+
+    INSERT INTO staff (person_id, user_id, position, salary, hire_date, status)
+    VALUES (v_person_id, v_user_id, p_position, p_salary, p_hire_date, 'Active');
+END$$
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_create_order_with_items(
+    IN p_customer_id INT,
+    IN p_pickup_address TEXT,
+    IN p_pickup_date DATE,
+    IN p_special_notes TEXT,
+    IN p_items JSON,
+    OUT p_order_id INT
+)
+BEGIN
+    DECLARE v_index INT DEFAULT 0;
+    DECLARE v_count INT DEFAULT 0;
+
+    DECLARE v_service_id INT;
+    DECLARE v_cloth_type_id INT;
+    DECLARE v_quantity INT;
+    DECLARE v_weight DECIMAL(10,2);
+    DECLARE v_notes TEXT;
+
+    DECLARE v_price DECIMAL(10,2);
+    DECLARE v_price_type VARCHAR(50);
+    DECLARE v_subtotal DECIMAL(10,2);
+    DECLARE v_total DECIMAL(10,2) DEFAULT 0.00;
+
+    -- CHECK CUSTOMER EXISTS
+    IF NOT EXISTS (
+        SELECT 1 FROM customers WHERE customer_id = p_customer_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Customer does not exist';
+    END IF;
+
+    -- CHECK ITEMS NOT EMPTY
+    IF JSON_LENGTH(p_items) IS NULL OR JSON_LENGTH(p_items) = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Order must contain at least one item';
+    END IF;
+
+    -- CREATE ORDER
+    INSERT INTO orders (
+        customer_id,
+        pickup_address,
+        pickup_date,
+        total_amount,
+        order_status,
+        payment_status,
+        special_notes
+    )
+    VALUES (
+        p_customer_id,
+        p_pickup_address,
+        p_pickup_date,
+        0.00,
+        'Pending',
+        'Unpaid',
+        p_special_notes
+    );
+
+    SET p_order_id = LAST_INSERT_ID();
+
+    SET v_count = JSON_LENGTH(p_items);
+
+    -- INSERT ITEMS
+    WHILE v_index < v_count DO
+
+        SET v_service_id = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_items, CONCAT('$[', v_index, '].service_id'))) AS UNSIGNED);
+        SET v_cloth_type_id = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_items, CONCAT('$[', v_index, '].cloth_type_id'))) AS UNSIGNED);
+        SET v_quantity = CAST(JSON_UNQUOTE(JSON_EXTRACT(p_items, CONCAT('$[', v_index, '].quantity'))) AS UNSIGNED);
+        SET v_weight = CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(p_items, CONCAT('$[', v_index, '].weight'))), 'null') AS DECIMAL(10,2));
+        SET v_notes = JSON_UNQUOTE(JSON_EXTRACT(p_items, CONCAT('$[', v_index, '].notes')));
+
+        -- CHECK SERVICE EXISTS
+        IF NOT EXISTS (
+            SELECT 1 FROM services
+            WHERE service_id = v_service_id
+              AND status = 'Active'
+        ) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Service does not exist or is inactive';
+        END IF;
+
+        -- CHECK CLOTH TYPE EXISTS
+        IF NOT EXISTS (
+            SELECT 1 FROM cloth_types
+            WHERE cloth_type_id = v_cloth_type_id
+              AND status = 'Active'
+        ) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Cloth type does not exist or is inactive';
+        END IF;
+
+        -- GET SERVICE PRICE
+        SELECT price, price_type
+        INTO v_price, v_price_type
+        FROM services
+        WHERE service_id = v_service_id
+          AND status = 'Active';
+
+        -- VALIDATION AND SUBTOTAL
+        IF v_price_type = 'Per Kg' THEN
+
+            IF v_weight IS NULL OR v_weight <= 0 THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Weight is required for per kg service';
+            END IF;
+
+            SET v_subtotal = v_weight * v_price;
+
+        ELSE
+
+            IF v_quantity IS NULL OR v_quantity <= 0 THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Quantity is required for per item or fixed service';
+            END IF;
+
+            SET v_subtotal = v_quantity * v_price;
+
+        END IF;
+
+        INSERT INTO order_items (
+            order_id,
+            service_id,
+            cloth_type_id,
+            quantity,
+            weight,
+            unit_price,
+            subtotal,
+            notes
+        )
+        VALUES (
+            p_order_id,
+            v_service_id,
+            v_cloth_type_id,
+            v_quantity,
+            v_weight,
+            v_price,
+            v_subtotal,
+            v_notes
+        );
+
+        SET v_total = v_total + v_subtotal;
+        SET v_index = v_index + 1;
+
+    END WHILE;
+
+    -- UPDATE TOTAL
+    UPDATE orders
+    SET total_amount = v_total
+    WHERE order_id = p_order_id;
+
+    -- TRACKING
+    INSERT INTO order_tracking (
+        order_id,
+        old_status,
+        new_status,
+        changed_by,
+        remarks
+    )
+    VALUES (
+        p_order_id,
+        NULL,
+        'Pending',
+        NULL,
+        'Order created'
+    );
+
+END$$
+
+DELIMITER ;
+
+
+
+
+
+
+
+
+
+
+
+
+Build a complete Wood Trading POS system as a 2-file Google Apps Script SPA (Code.gs + index.html).
+
+DOMAIN: A wood trading business that buys wood from suppliers (each shipment = a "Car"),
+stocks wood pieces (each with serial, width, length, calculated CFT), and sells via POS.
+
+ROLES: admin, manager, cashier, warehouse_staff — each sees a different dashboard and menu.
+
+SHEETS (one each, all created by setupDemoData):
+- Users (id, name, email, phone, password, role, avatar_drive_id, is_active, created_at, updated_at, otp, otp_expires)
+- Categories, Sub_Categories (Cars), Suppliers, Customers
+- Wood_Stocks (serial, sub_cat, purchase_id, w/l/cft, buy_rate, sell_rate, qty, status, image_drive_id)
+- Purchases, Sales, Sale_Items, Payments (unified — supplier_payment / customer_payment)
+- Expenses, Import_Logs, Settings (KV), Activity_Logs
+
+FEATURES:
+1. Login with email/pwd. Forgot Password sends 6-digit OTP via MailApp,
+   stores in Users sheet with 10-min expiry. Reset flow: email → OTP+new pwd.
+2. Dashboard: hero with greeting + 3 inline stats, smart auto-alerts,
+   6 quick-action cards, KPI grid with today-vs-yesterday trend pills,
+   Daily Sales line chart (gradient), Stock Status vertical bar chart,
+   Top Customers bar, Expense breakdown donut, unified activity timeline.
+3. POS: searchable wood cards with images, qty-picker modal, cart with
+   inline qty+rate edit, customer card (gradient when selected), quick-pay
+   buttons (Full / Half / None), method tiles with icons, thermal + A4 print.
+4. Wood Inventory: DataTable with image thumbnails, image upload to Drive,
+   bulk CSV import, sub-category drilldown, stock aging report.
+5. Reports: Profit/Loss, Sales Summary, Stock Aging, Customer Analysis,
+   Car/Shipment P&L — all with Chart.js + DataTables export.
+6. SWR caching: localStorage-backed, instant repaint, silent revalidation.
+7. Role-aware menus, server-side role checks on every function.
+8. Custom Swal-replacement modals (no external popup CDN).
+9. Branded A4 invoice using business_name/address/phone from Settings sheet.
+
+DESIGN: Navy Blue theme. SearchableDropdown for every select.
+Loading popup pattern. DataTables 10/page with CSV/PDF/Print buttons.
+Mobile bottom nav. Sidebar collapsible, persisted to localStorage.
+
+OUTPUT: Code.gs + index.html only. Use LockService on all writes.
+Add the Rameez Scripts header comment block to both files.
+Run setupDemoData() to seed April 2026 demo data including all April dates.

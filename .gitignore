@@ -1,0 +1,29 @@
+Backend/node_modules/
+Frontend/node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Ignore log files and temp files
+*.log
+*.tmp
+.env
+.env.*
+
+# Ignore IDE/editor files
+.idea/
+.vscode/
+
+# Ignore build artifacts
+dist/
+build/
+Backend/dist/
+Backend/build/
+Frontend/build/
+Frontend/.dart_tool/
+Frontend/.flutter-plugins
+Frontend/.flutter-plugins-dependencies
+Frontend/.packages
+Frontend/.pub-cache/
+Frontend/coverage/
+frontend/dist/
+frontend/build/
