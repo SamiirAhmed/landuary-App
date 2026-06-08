@@ -6,6 +6,7 @@ import '../../routes/app_routes.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/form_card.dart';
+import '../../widgets/success_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,8 +35,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (_loginController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Phone/email and password are required')),
+      showErrorDialog(
+        context,
+        title: 'Validation Error',
+        message: 'Phone/email and password are required',
       );
       return;
     }
@@ -50,8 +53,10 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacementNamed(context, AppRoutes.homeForRole(role));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+      showErrorDialog(
+        context,
+        title: 'Login Failed',
+        message: 'Invalid email and password',
       );
     }
   }

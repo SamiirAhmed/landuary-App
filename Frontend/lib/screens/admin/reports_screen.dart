@@ -42,7 +42,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('Reports'),
         actions: [
           IconButton(
@@ -57,8 +62,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: CircularProgressIndicator(),
             )
           : RefreshIndicator(
-        onRefresh: _loadReports,
-        child: ListView(
+              onRefresh: _loadReports,
+              child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -102,7 +107,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ],
               ),
-      ),
+            ),
     );
   }
 }

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/providers/app_state.dart';
 import '../../routes/app_routes.dart';
-import '../../widgets/custom_button.dart';
+
 
 class StaffDashboardScreen extends StatefulWidget {
   const StaffDashboardScreen({super.key});
@@ -59,12 +59,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
   }
 
-  int _statusCount(String status) {
-    return _orders.where((order) {
-      return order['order_status']?.toString().toLowerCase() ==
-          status.toLowerCase();
-    }).length;
-  }
+
 
   @override
   Widget build(BuildContext context) {

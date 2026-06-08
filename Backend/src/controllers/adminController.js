@@ -114,7 +114,7 @@ const getServices = async (req, res) => {
 
 const updateService = async (req, res) => {
   try {
-    const { service_id, price, status } = req.body;
+    const { service_id, service_name, price_type, price, description, status } = req.body;
 
     if (!service_id) {
       return res.status(400).json({
@@ -125,10 +125,13 @@ const updateService = async (req, res) => {
 
     await db.execute(
       `UPDATE services
-      SET price = COALESCE(?, price),
+      SET service_name = COALESCE(?, service_name),
+          price_type = COALESCE(?, price_type),
+          price = COALESCE(?, price),
+          description = COALESCE(?, description),
           status = COALESCE(?, status)
       WHERE service_id = ?`,
-      [price ?? null, status || null, service_id]
+      [service_name || null, price_type || null, price ?? null, description || null, status || null, service_id]
     );
 
     return res.status(200).json({
@@ -139,6 +142,26 @@ const updateService = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to update service',
+      error: error.message
+    });
+  }
+};
+
+const deleteService = async (req, res) => {
+  try {
+    const { service_id } = req.body;
+    if (!service_id) {
+      return res.status(400).json({ success: false, message: 'service_id is required' });
+    }
+    await db.execute('DELETE FROM services WHERE service_id = ?', [service_id]);
+    return res.status(200).json({ success: true, message: 'Service deleted' });
+  } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(400).json({ success: false, message: 'Cannot delete service because it is used in orders. Try changing its status to Inactive instead.' });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete service',
       error: error.message
     });
   }
@@ -274,6 +297,7 @@ module.exports = {
   getServices,
   addService,
   updateService,
+  deleteService,
   getReports,
   addExpense,
   getExpenses

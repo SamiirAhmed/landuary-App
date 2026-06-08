@@ -122,6 +122,364 @@ class _ManageStaffScreenState extends State<ManageStaffScreen> {
     _loadStaff();
   }
 
+  Future<void> _deleteStaff(Map<String, dynamic> staff) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Staff', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(
+          'Are you sure you want to delete "${staff['full_name']}"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      try {
+        await context.read<AppState>().apiService.deleteStaff(
+              int.parse(staff['staff_id'].toString()),
+            );
+        _loadStaff();
+        if (mounted) {
+          showSuccessDialog(
+            context,
+            title: 'Staff Deleted',
+            message: 'Staff deleted successfully',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          showErrorDialog(
+            context,
+            title: 'Error',
+            message: e.toString(),
+          );
+        }
+      }
+    }
+  }
+
+  void _showEditStaff(Map<String, dynamic> staff) {
+    final nameCtrl    = TextEditingController(text: staff['full_name']?.toString() ?? '');
+    final phoneCtrl   = TextEditingController(text: staff['phone']?.toString() ?? '');
+    final emailCtrl   = TextEditingController(text: staff['email']?.toString() ?? '');
+    final posCtrl     = TextEditingController(text: staff['position']?.toString() ?? '');
+    final salaryCtrl  = TextEditingController(text: staff['salary']?.toString() ?? '');
+    String sex        = staff['sex']?.toString() ?? 'Male';
+    String role       = staff['role']?.toString() ?? 'Staff';
+    final List<String> availableRoles = ['Staff', 'Delivery'];
+    if (!availableRoles.contains(role)) {
+      availableRoles.add(role);
+    }
+    final formKey     = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40, height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Edit Staff',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    CustomTextField(
+                      controller: nameCtrl,
+                      label: 'Full Name',
+                      icon: Icons.person_outline,
+                      validator: (v) => (v == null || v.trim().length < 2) ? 'Name must be at least 2 characters' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: phoneCtrl,
+                      label: 'Phone',
+                      icon: Icons.phone_outlined,
+                      keyboardType: TextInputType.phone,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (int.tryParse(v.trim()) == null) return 'Enter a valid number';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: emailCtrl,
+                      label: 'Email',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                        if (!emailRegex.hasMatch(v.trim())) return 'Enter a valid email';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    SexRadioGroup(
+                      value: sex,
+                      onChanged: (v) => setModalState(() => sex = v),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: role,
+                      decoration: InputDecoration(
+                        labelText: 'Role',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      items: availableRoles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                      onChanged: (v) => setModalState(() => role = v ?? role),
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: posCtrl,
+                      label: 'Position',
+                      icon: Icons.work_outline,
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: salaryCtrl,
+                      label: 'Salary',
+                      icon: Icons.attach_money,
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (double.tryParse(v.trim()) == null) return 'Enter a valid number';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    CustomButton(
+                      label: 'Save Changes',
+                      icon: Icons.save_outlined,
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        try {
+                          await context.read<AppState>().apiService.updateStaff({
+                            'staff_id': staff['staff_id'],
+                            'full_name': nameCtrl.text.trim(),
+                            'phone': phoneCtrl.text.trim(),
+                            'email': emailCtrl.text.trim(),
+                            'sex': sex,
+                            'role': role,
+                            'position': posCtrl.text.trim(),
+                            'salary': double.tryParse(salaryCtrl.text.trim()) ?? 0,
+                          });
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          _loadStaff();
+                          if (mounted) {
+                            showSuccessDialog(
+                              context,
+                              title: 'Staff Updated',
+                              message: 'Staff updated successfully',
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            showErrorDialog(
+                              context,
+                              title: 'Error',
+                              message: e.toString(),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showStaffDetails(BuildContext context, Map<String, dynamic> staff) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1E68D9).withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        (staff['full_name']?.toString() ?? '?')
+                            .split(' ')
+                            .where((w) => w.isNotEmpty)
+                            .take(2)
+                            .map((w) => w[0].toUpperCase())
+                            .join(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          staff['full_name']?.toString() ?? '-',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            _StaffChip(
+                              label: staff['role']?.toString() ?? '-',
+                              color: const Color(0xFF3B82F6),
+                            ),
+                            const SizedBox(width: 8),
+                            _StaffChip(
+                              label: staff['status']?.toString() ?? '-',
+                              color: staff['status'] == 'Active'
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Staff Details',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _DetailRow(icon: Icons.work_outline, label: 'Position', value: staff['position']?.toString() ?? '-'),
+              _DetailRow(icon: Icons.phone_outlined, label: 'Phone', value: staff['phone']?.toString() ?? '-'),
+              _DetailRow(icon: Icons.email_outlined, label: 'Email', value: staff['email']?.toString() ?? '-'),
+              _DetailRow(icon: Icons.person_outline, label: 'Sex', value: staff['sex']?.toString() ?? '-'),
+              _DetailRow(icon: Icons.attach_money, label: 'Salary', value: '\$${staff['salary']?.toString() ?? '0'}'),
+              _DetailRow(icon: Icons.calendar_today_outlined, label: 'Hire Date', value: staff['hire_date']?.toString().split('T')[0] ?? '-'),
+              const SizedBox(height: 16),
+              // Edit button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  label: const Text(
+                    'Edit Staff Info',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showEditStaff(staff);
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -241,7 +599,7 @@ class _ManageStaffScreenState extends State<ManageStaffScreen> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
-                            value: _role,
+                            initialValue: _role,
                             items: ['Staff', 'Delivery']
                                 .map((role) => DropdownMenuItem(
                                       value: role,
@@ -322,8 +680,10 @@ class _ManageStaffScreenState extends State<ManageStaffScreen> {
                   ),
                   const SizedBox(height: 16),
                   ..._staff.map(
-                    (staff) => Container(
-                      margin: const EdgeInsets.only(bottom: 12),
+                    (staff) => GestureDetector(
+                      onTap: () => _showStaffDetails(context, staff),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
@@ -421,14 +781,24 @@ class _ManageStaffScreenState extends State<ManageStaffScreen> {
                             ),
                             // Menu
                             PopupMenuButton<String>(
-                              onSelected: (status) => _setStatus(staff, status),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               itemBuilder: (_) => const [
                                 PopupMenuItem(value: 'Active', child: Text('Activate')),
                                 PopupMenuItem(value: 'Inactive', child: Text('Inactivate')),
+                                PopupMenuItem(
+                                  value: 'Delete',
+                                  child: Text('Delete', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w700)),
+                                ),
                               ],
+                              onSelected: (value) {
+                                if (value == 'Delete') {
+                                  _deleteStaff(staff);
+                                } else {
+                                  _setStatus(staff, value);
+                                }
+                              },
                               icon: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
@@ -446,6 +816,7 @@ class _ManageStaffScreenState extends State<ManageStaffScreen> {
                         ),
                       ),
                     ),
+                  ),
                   ),
 
                 ],
@@ -477,6 +848,58 @@ class _StaffChip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F4FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: const Color(0xFF3B82F6), size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

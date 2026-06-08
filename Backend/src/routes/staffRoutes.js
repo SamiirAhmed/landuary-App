@@ -5,7 +5,9 @@ const {
   getStaffOrders,
   getCustomerBalances,
   getStaffList,
-  updateStaffStatus
+  updateStaffStatus,
+  updateStaff,
+  deleteStaff
 } = require('../controllers/staffController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -17,5 +19,7 @@ router.get('/orders', authMiddleware, getStaffOrders);
 router.get('/customer-balances', authMiddleware, getCustomerBalances);
 router.get('/list', authMiddleware, getStaffList);
 router.put('/status', authMiddleware, updateStaffStatus);
+router.put('/update', authMiddleware, updateStaff);
+router.delete('/delete', authMiddleware, deleteStaff);
 
 module.exports = router;

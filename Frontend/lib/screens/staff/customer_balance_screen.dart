@@ -209,7 +209,7 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
                                 ),
                               ),
                               Switch(
-                                activeColor: const Color(0xFF3B82F6),
+                                activeThumbColor: const Color(0xFF3B82F6),
                                 value: _showBalance,
                                 onChanged: (value) {
                                   setState(() => _showBalance = value);

@@ -303,6 +303,15 @@ class ApiService {
     _decode(response);
   }
 
+  Future<void> deleteService(int serviceId) async {
+    final response = await http.delete(
+      _uri(ApiConstants.adminServices),
+      headers: await _headers(authenticated: true),
+      body: jsonEncode({'service_id': serviceId}),
+    );
+    _decode(response);
+  }
+
   Future<List<Map<String, dynamic>>> getStaffList() async {
     final response = await http.get(
       _uri(ApiConstants.staffList),
@@ -318,6 +327,24 @@ class ApiService {
       _uri(ApiConstants.staffStatus),
       headers: await _headers(authenticated: true),
       body: jsonEncode(data),
+    );
+    _decode(response);
+  }
+
+  Future<void> updateStaff(Map<String, dynamic> data) async {
+    final response = await http.put(
+      _uri(ApiConstants.staffUpdate),
+      headers: await _headers(authenticated: true),
+      body: jsonEncode(data),
+    );
+    _decode(response);
+  }
+
+  Future<void> deleteStaff(int staffId) async {
+    final response = await http.delete(
+      _uri(ApiConstants.staffDelete),
+      headers: await _headers(authenticated: true),
+      body: jsonEncode({'staff_id': staffId}),
     );
     _decode(response);
   }

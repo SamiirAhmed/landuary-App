@@ -297,11 +297,104 @@ const updateStaffStatus = async (req, res) => {
   }
 };
 
+const updateStaff = async (req, res) => {
+  try {
+    const { staff_id, full_name, phone, sex, email, position, salary, role } = req.body;
+
+    if (!staff_id) {
+      return res.status(400).json({ success: false, message: 'staff_id is required' });
+    }
+
+    // Update people table
+    await db.execute(
+      `UPDATE people p
+       INNER JOIN staff s ON s.person_id = p.person_id
+       SET p.full_name = COALESCE(?, p.full_name),
+           p.phone    = COALESCE(?, p.phone),
+           p.sex      = COALESCE(?, p.sex),
+           p.email    = COALESCE(?, p.email)
+       WHERE s.staff_id = ?`,
+      [full_name || null, phone || null, sex || null, email || null, staff_id]
+    );
+
+    // Update staff table
+    await db.execute(
+      `UPDATE staff SET
+         position = COALESCE(?, position),
+         salary   = COALESCE(?, salary)
+       WHERE staff_id = ?`,
+      [position || null, salary || null, staff_id]
+    );
+
+    // Update role in users table
+    if (role) {
+      await db.execute(
+        `UPDATE users u
+         INNER JOIN staff s ON s.user_id = u.user_id
+         SET u.role = ?
+         WHERE s.staff_id = ?`,
+        [role, staff_id]
+      );
+    }
+
+    return res.status(200).json({ success: true, message: 'Staff updated successfully' });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update staff',
+      error: error.message
+    });
+  }
+};
+
+const deleteStaff = async (req, res) => {
+  try {
+    const { staff_id } = req.body;
+
+    if (!staff_id) {
+      return res.status(400).json({ success: false, message: 'staff_id is required' });
+    }
+
+    // Get person_id and user_id for this staff
+    const [rows] = await db.execute(
+      'SELECT person_id, user_id FROM staff WHERE staff_id = ?',
+      [staff_id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Staff not found' });
+    }
+
+    const { person_id, user_id } = rows[0];
+
+    // Delete staff record
+    await db.execute('DELETE FROM staff WHERE staff_id = ?', [staff_id]);
+
+    // Delete user account if exists
+    if (user_id) {
+      await db.execute('DELETE FROM users WHERE user_id = ?', [user_id]);
+    }
+
+    // Delete person record
+    await db.execute('DELETE FROM people WHERE person_id = ?', [person_id]);
+
+    return res.status(200).json({ success: true, message: 'Staff deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete staff',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   registerStaff,
   getStaffDashboard,
   getStaffOrders,
   getCustomerBalances,
   getStaffList,
-  updateStaffStatus
+  updateStaffStatus,
+  updateStaff,
+  deleteStaff
 };

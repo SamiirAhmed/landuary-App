@@ -6,7 +6,8 @@ const {
   updateService,
   getReports,
   addExpense,
-  getExpenses
+  getExpenses,
+  deleteService
 } = require('../controllers/adminController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -16,6 +17,7 @@ router.get('/dashboard', authMiddleware, getAdminDashboard);
 router.get('/services', authMiddleware, getServices);
 router.post('/services', authMiddleware, addService);
 router.put('/services', authMiddleware, updateService);
+router.delete('/services', authMiddleware, deleteService);
 router.get('/reports', authMiddleware, getReports);
 router.get('/expenses', authMiddleware, getExpenses);
 router.post('/expenses', authMiddleware, addExpense);

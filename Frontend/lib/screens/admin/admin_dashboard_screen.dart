@@ -32,13 +32,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       final Future<Map<String, dynamic>> apiCall =
           context.read<AppState>().apiService.getAdminDashboard();
-      
+
       // Ensure minimum delay so RefreshIndicator doesn't get stuck (Flutter bug)
       final results = await Future.wait([
         apiCall,
         if (silent) Future.delayed(const Duration(milliseconds: 600)),
       ]);
-      
+
       if (!mounted) return;
       setState(() => _dashboard = results[0] as Map<String, dynamic>);
     } catch (error) {
@@ -380,7 +380,7 @@ class _HeroCard extends StatelessWidget {
                     ),
                     SizedBox(height: 18),
                     Text(
-                      'Company GB\nLaundry',
+                      'GB Laundry',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 28,

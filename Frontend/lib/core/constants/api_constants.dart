@@ -22,6 +22,8 @@ class ApiConstants {
   static const String staffCustomerBalances = '/staff/customer-balances';
   static const String staffList = '/staff/list';
   static const String staffStatus = '/staff/status';
+  static const String staffUpdate = '/staff/update';
+  static const String staffDelete = '/staff/delete';
 
   static const String deliveryOrders = '/delivery/orders';
   static const String deliveryPickedUp = '/delivery/picked-up';

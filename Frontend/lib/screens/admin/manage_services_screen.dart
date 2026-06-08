@@ -6,6 +6,7 @@ import '../../models/service_model.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/form_card.dart';
+import '../../widgets/success_dialog.dart';
 
 class ManageServicesScreen extends StatefulWidget {
   const ManageServicesScreen({super.key});
@@ -28,6 +29,14 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
     _loadServices();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadServices() async {
     final services =
         await context.read<AppState>().apiService.getAdminServices();
@@ -39,6 +48,16 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
   }
 
   Future<void> _addService() async {
+    if (_nameController.text.trim().isEmpty ||
+        _priceController.text.trim().isEmpty) {
+      showErrorDialog(
+        context,
+        title: 'Missing details',
+        message: 'Service name and price are required',
+      );
+      return;
+    }
+
     try {
       await context.read<AppState>().apiService.addService({
         'service_name': _nameController.text.trim(),
@@ -50,26 +69,86 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
       _priceController.clear();
       _descriptionController.clear();
       _loadServices();
+      if (mounted)
+        showSuccessDialog(context,
+            title: 'Success', message: 'Service added successfully');
     } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+      if (mounted)
+        showErrorDialog(context, title: 'Error', message: error.toString());
     }
   }
 
-  Future<void> _updateService(ServiceModel service,
-      {double? price, String? status}) async {
+  Future<void> _updateServiceStatus(ServiceModel service, String status) async {
     try {
       await context.read<AppState>().apiService.updateService({
         'service_id': service.serviceId,
-        'price': price,
         'status': status,
       });
-      _loadServices();
+      await _loadServices();
+      if (mounted) {
+        showSuccessDialog(
+          context,
+          title: 'Success',
+          message: 'Service ${status.toLowerCase()} successfully',
+        );
+      }
     } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+      if (mounted) {
+        showErrorDialog(context, title: 'Error', message: error.toString());
+      }
+    }
+  }
+
+  Future<void> _deleteService(ServiceModel service) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Service'),
+        content:
+            Text('Are you sure you want to delete ${service.serviceName}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await context
+          .read<AppState>()
+          .apiService
+          .deleteService(service.serviceId);
+      await _loadServices();
+      if (mounted)
+        showSuccessDialog(context,
+            title: 'Deleted', message: 'Service deleted successfully');
+    } catch (error) {
+      if (mounted)
+        showErrorDialog(context, title: 'Error', message: error.toString());
+    }
+  }
+
+  Future<void> _updateService(
+      ServiceModel service, Map<String, dynamic> data) async {
+    try {
+      await context.read<AppState>().apiService.updateService({
+        'service_id': service.serviceId,
+        ...data,
+      });
+      await _loadServices();
+      if (mounted)
+        showSuccessDialog(context,
+            title: 'Success', message: 'Service updated successfully');
+    } catch (error) {
+      if (mounted)
+        showErrorDialog(context, title: 'Error', message: error.toString());
     }
   }
 
@@ -92,8 +171,8 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
               child: CircularProgressIndicator(),
             )
           : RefreshIndicator(
-        onRefresh: _loadServices,
-        child: ListView(
+              onRefresh: _loadServices,
+              child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -144,19 +223,37 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                             '${service.priceType} - \$${service.price} - ${service.status}'),
                         trailing: PopupMenuButton<String>(
                           onSelected: (value) {
-                            if (value == 'active')
-                              _updateService(service, status: 'Active');
-                            if (value == 'inactive')
-                              _updateService(service, status: 'Inactive');
-                            if (value == 'price') _showPriceDialog(service);
+                            if (value == 'update') _showEditDialog(service);
+                            if (value == 'activate') {
+                              _updateServiceStatus(service, 'Active');
+                            }
+                            if (value == 'inactive') {
+                              _updateServiceStatus(service, 'Inactive');
+                            }
+                            if (value == 'delete') _deleteService(service);
                           },
-                          itemBuilder: (_) => const [
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'update',
+                              child: Text('Update service'),
+                            ),
                             PopupMenuItem(
-                                value: 'price', child: Text('Update price')),
-                            PopupMenuItem(
-                                value: 'active', child: Text('Activate')),
-                            PopupMenuItem(
-                                value: 'inactive', child: Text('Inactivate')),
+                              value: service.status == 'Active'
+                                  ? 'inactive'
+                                  : 'activate',
+                              child: Text(
+                                service.status == 'Active'
+                                    ? 'Inactivate'
+                                    : 'Activate',
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -164,32 +261,81 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                   ),
                 ],
               ),
-      ),
+            ),
     );
   }
 
-  void _showPriceDialog(ServiceModel service) {
-    final controller = TextEditingController(text: service.price.toString());
+  void _showEditDialog(ServiceModel service) {
+    final nameCtrl = TextEditingController(text: service.serviceName);
+    final priceCtrl = TextEditingController(text: service.price.toString());
+    final descCtrl = TextEditingController(text: service.description ?? '');
+    String type = service.priceType;
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Update Price'),
-        content: TextField(
-            controller: controller, keyboardType: TextInputType.number),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _updateService(service,
-                  price:
-                      double.tryParse(controller.text.trim()) ?? service.price);
-            },
-            child: const Text('Save'),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Edit Service'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Service Name'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  items: ['Per Item', 'Per Kg', 'Fixed']
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                  onChanged: (v) => setState(() => type = v ?? type),
+                  decoration: const InputDecoration(labelText: 'Price Type'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Price'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(labelText: 'Description'),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty ||
+                    priceCtrl.text.trim().isEmpty) {
+                  showErrorDialog(
+                    ctx,
+                    title: 'Missing details',
+                    message: 'Service name and price are required',
+                  );
+                  return;
+                }
+
+                Navigator.pop(ctx);
+                _updateService(service, {
+                  'service_name': nameCtrl.text.trim(),
+                  'price_type': type,
+                  'price':
+                      double.tryParse(priceCtrl.text.trim()) ?? service.price,
+                  'description': descCtrl.text.trim(),
+                });
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -143,8 +143,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    showErrorDialog(
+      context,
+      title: 'Error',
+      message: message,
+    );
   }
 
   Widget _errorText(String msg) => Padding(
@@ -261,8 +264,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _nameController,
                                 label: 'Full Name',
                                 icon: Icons.person_outline,
-                                validator: (v) => (v == null || v.trim().isEmpty)
-                                    ? 'Full name is required'
+                                validator: (v) => (v == null || v.trim().length < 2)
+                                    ? 'Name must be at least 2 characters'
                                     : null,
                               ),
                               const SizedBox(height: 14),
@@ -270,9 +273,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _phoneController,
                                 label: 'Phone',
                                 icon: Icons.phone_outlined,
-                                validator: (v) => (v == null || v.trim().isEmpty)
-                                    ? 'Phone number is required'
-                                    : null,
+                                keyboardType: TextInputType.phone,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Phone number is required';
+                                  if (int.tryParse(v.trim()) == null) return 'Enter a valid number';
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 14),
                               // Sex with error
@@ -294,9 +300,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _emailController,
                                 label: 'Email',
                                 icon: Icons.email_outlined,
+                                keyboardType: TextInputType.emailAddress,
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) return 'Email is required';
-                                  if (!v.contains('@')) return 'Enter a valid email';
+                                  final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                                  if (!emailRegex.hasMatch(v.trim())) return 'Enter a valid email';
                                   return null;
                                 },
                               ),
