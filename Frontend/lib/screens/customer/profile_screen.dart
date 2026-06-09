@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/app_state.dart';
-import '../../core/storage/token_storage.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,46 +11,19 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _storage = TokenStorage();
-  final _picker = ImagePicker();
-  String? _profileImagePath;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfileImage();
-  }
-
-  Future<void> _loadProfileImage() async {
-    final path = await _storage.getProfileImagePath();
-    if (!mounted) return;
-    setState(() => _profileImagePath = path);
-  }
-
   Future<void> _handleRefresh() async {
-    await _loadProfileImage();
     if (mounted) {
       await context.read<AppState>().loadSession();
     }
   }
 
-  Future<void> _pickProfileImage() async {
-    final image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 800,
-    );
-
-    if (image == null) return;
-
-    await _storage.saveProfileImagePath(image.path);
-    if (!mounted) return;
-    setState(() => _profileImagePath = image.path);
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppState>().user ?? {};
+    final name = user['full_name']?.toString().trim();
+    final fallbackName = user['role']?.toString() ?? 'User';
+    final avatarSource = (name == null || name.isEmpty) ? fallbackName : name;
+    final initial = avatarSource.isEmpty ? 'U' : avatarSource[0].toUpperCase();
 
     return Scaffold(
       appBar: AppBar(
@@ -74,46 +43,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: const EdgeInsets.all(20),
           children: [
             Center(
-              child: GestureDetector(
-                onTap: _pickProfileImage,
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 54,
-                      backgroundColor: const Color(0xFF1554B7),
-                      backgroundImage: _profileImagePath == null
-                          ? null
-                          : FileImage(File(_profileImagePath!)),
-                      child: _profileImagePath == null
-                          ? const Icon(Icons.person,
-                              size: 56, color: Colors.white)
-                          : null,
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1554B7),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: const Icon(Icons.camera_alt,
-                            color: Colors.white, size: 18),
-                      ),
-                    ),
-                  ],
+              child: CircleAvatar(
+                radius: 54,
+                backgroundColor: const Color(0xFF1554B7),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 44,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Center(
-              child: Text(
-                'Tap photo to upload',
-                style: TextStyle(
-                    color: Color(0xFF1554B7), fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(height: 20),
@@ -124,9 +64,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _ProfileTile(
                 icon: Icons.wc_outlined, label: 'Sex', value: user['sex']),
             _ProfileTile(
-                icon: Icons.phone_outlined, label: 'Phone', value: user['phone']),
+                icon: Icons.phone_outlined,
+                label: 'Phone',
+                value: user['phone']),
             _ProfileTile(
-                icon: Icons.email_outlined, label: 'Email', value: user['email']),
+                icon: Icons.email_outlined,
+                label: 'Email',
+                value: user['email']),
             _ProfileTile(
               icon: Icons.location_city_outlined,
               label: 'City',

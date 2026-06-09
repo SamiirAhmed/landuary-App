@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/app_state.dart';
-import '../../core/storage/token_storage.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/form_card.dart';
@@ -18,10 +14,6 @@ class AdminProfileScreen extends StatefulWidget {
 }
 
 class _AdminProfileScreenState extends State<AdminProfileScreen> {
-  final _storage = TokenStorage();
-  final _picker = ImagePicker();
-  String? _profileImagePath;
-
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -30,43 +22,16 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   bool _isPasswordLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    _loadProfileImage();
-  }
-
-  @override
   void dispose() {
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadProfileImage() async {
-    final path = await _storage.getProfileImagePath();
-    if (!mounted) return;
-    setState(() => _profileImagePath = path);
-  }
-
   Future<void> _handleRefresh() async {
-    await _loadProfileImage();
     if (mounted) {
       await context.read<AppState>().loadSession();
     }
-  }
-
-  Future<void> _pickProfileImage() async {
-    final image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 800,
-    );
-
-    if (image == null) return;
-
-    await _storage.saveProfileImagePath(image.path);
-    if (!mounted) return;
-    setState(() => _profileImagePath = image.path);
   }
 
   Future<void> _changePassword() async {
@@ -122,6 +87,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     final role = user['role']?.toString() ?? 'Admin';
     final email = user['email']?.toString() ?? '-';
     final phone = user['phone']?.toString() ?? '-';
+    final initial = fullName.trim().isEmpty ? 'A' : fullName[0].toUpperCase();
 
     return Scaffold(
       appBar: AppBar(
@@ -142,48 +108,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
           children: [
-            // Profile Photo & Name Header
             Center(
-              child: GestureDetector(
-                onTap: _pickProfileImage,
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 54,
-                      backgroundColor: const Color(0xFF1554B7),
-                      backgroundImage: _profileImagePath == null
-                          ? null
-                          : FileImage(File(_profileImagePath!)),
-                      child: _profileImagePath == null
-                          ? const Icon(Icons.person,
-                              size: 56, color: Colors.white)
-                          : null,
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1554B7),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: const Icon(Icons.camera_alt,
-                            color: Colors.white, size: 18),
-                      ),
-                    ),
-                  ],
+              child: CircleAvatar(
+                radius: 54,
+                backgroundColor: const Color(0xFF1554B7),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 44,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Center(
-              child: Text(
-                'Tap photo to upload',
-                style: TextStyle(
-                    color: Color(0xFF1554B7), fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(height: 12),
