@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/providers/app_state.dart';
 import '../../models/order_model.dart';
 import '../../routes/app_routes.dart';
+import '../payments/customer_payment_history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -111,15 +112,20 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             _HomeCard(
               title: 'Order History',
-              subtitle: 'Track previous and active orders',
+              subtitle: 'Review past orders by date',
               icon: Icons.receipt_long_outlined,
               onTap: () => Navigator.pushNamed(context, AppRoutes.orderHistory),
             ),
             _HomeCard(
               title: 'Payments',
-              subtitle: 'Pay orders and view payment history',
+              subtitle: 'View your payment history',
               icon: Icons.payments_outlined,
-              onTap: () => Navigator.pushNamed(context, AppRoutes.orderHistory),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CustomerPaymentHistoryScreen(),
+                ),
+              ),
             ),
             _HomeCard(
               title: 'Profile',

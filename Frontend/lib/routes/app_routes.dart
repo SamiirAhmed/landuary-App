@@ -12,6 +12,7 @@ import '../screens/delivery/delivery_dashboard_screen.dart';
 import '../screens/customer/home_screen.dart';
 import '../screens/orders/create_order_screen.dart';
 import '../screens/orders/order_history_screen.dart';
+import '../screens/payments/customer_payment_history_screen.dart';
 import '../screens/customer/profile_screen.dart';
 import '../screens/staff/customer_balance_screen.dart';
 import '../screens/staff/staff_dashboard_screen.dart';
@@ -30,6 +31,7 @@ class AppRoutes {
   static const profile = '/profile';
   static const payment = '/payments/pay';
   static const paymentHistory = '/payments/history';
+  static const customerPayments = '/payments/customer-history';
   static const staffDashboard = '/staff/dashboard';
   static const staffOrders = '/staff/orders';
   static const customerBalance = '/staff/customer-balance';
@@ -49,6 +51,7 @@ class AppRoutes {
     home: (_) => const HomeScreen(),
     createOrder: (_) => const CreateOrderScreen(),
     orderHistory: (_) => const OrderHistoryScreen(),
+    customerPayments: (_) => const CustomerPaymentHistoryScreen(),
     profile: (_) => const ProfileScreen(),
     staffDashboard: (_) => const StaffDashboardScreen(),
     staffOrders: (_) => const StaffOrdersScreen(),

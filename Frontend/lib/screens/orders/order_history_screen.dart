@@ -73,6 +73,14 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           .apiService
           .getCustomerOrders(customerId);
       if (!mounted) return;
+      orders.sort((a, b) {
+        final first = DateTime.tryParse(a.createdAt ?? a.pickupDate ?? '');
+        final second = DateTime.tryParse(b.createdAt ?? b.pickupDate ?? '');
+        if (first == null && second == null) return 0;
+        if (first == null) return 1;
+        if (second == null) return -1;
+        return second.compareTo(first);
+      });
       setState(() => _orders = orders);
     } catch (error) {
       if (!mounted) return;
@@ -166,6 +174,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                       final dateLabel =
                           _exactDate(order.createdAt ?? order.pickupDate);
                       final balance = order.balance;
+                      final canPay = balance > 0;
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -200,14 +209,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                     subtitle: Padding(
                                       padding: const EdgeInsets.only(top: 6),
                                       child: Text(
-                                        '${order.orderStatus} | ${order.paymentStatus}\n'
+                                        'Order date: $dateLabel\n'
+                                        'Status: ${order.orderStatus}\n'
                                         'Pickup: ${_exactDate(order.pickupDate)}\n'
-                                        'Created: ${_exactDate(order.createdAt)}\n'
+                                        'Payment: ${order.paymentStatus}\n'
                                         'Balance: ${money.format(balance)}',
                                       ),
                                     ),
                                     trailing: Text(
-                                      money.format(order.totalAmount),
+                                      money.format(balance),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: Color(0xFF1554B7),
@@ -220,40 +230,30 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          onPressed: () async {
-                                            final changed =
-                                                await Navigator.pushNamed(
-                                              context,
-                                              AppRoutes.payment,
-                                              arguments: {
-                                                'order_id': order.orderId,
-                                                'total_amount': order.balance,
-                                              },
-                                            );
-                                            if (changed == true) _loadOrders();
-                                          },
-                                          icon: const Icon(
-                                              Icons.payments_outlined),
-                                          label: const Text('PAY'),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          onPressed: () => Navigator.pushNamed(
-                                            context,
-                                            AppRoutes.paymentHistory,
-                                            arguments: order.orderId,
-                                          ),
-                                          icon: const Icon(Icons.history),
-                                          label: const Text('HISTORY'),
-                                        ),
-                                      ),
-                                    ],
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: canPay
+                                          ? () async {
+                                              final changed =
+                                                  await Navigator.pushNamed(
+                                                context,
+                                                AppRoutes.payment,
+                                                arguments: {
+                                                  'order_id': order.orderId,
+                                                  'total_amount': balance,
+                                                },
+                                              );
+                                              if (changed == true) {
+                                                _loadOrders();
+                                              }
+                                            }
+                                          : null,
+                                      icon: Icon(canPay
+                                          ? Icons.payments_outlined
+                                          : Icons.check_circle_outline),
+                                      label: Text(canPay ? 'PAY' : 'PAID'),
+                                    ),
                                   ),
                                 ],
                               ),

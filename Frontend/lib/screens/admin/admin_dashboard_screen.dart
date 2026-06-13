@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import '../../core/providers/app_state.dart';
 import '../../routes/app_routes.dart';
-import 'admin_profile_screen.dart';
 import 'expenses_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -637,17 +636,6 @@ class _AdminDrawer extends StatelessWidget {
             },
           ),
           const SizedBox(height: 18),
-          _DrawerActionTile(
-            icon: Icons.person_outline,
-            title: 'Profile',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
-              );
-            },
-          ),
           _DrawerActionTile(
             icon: Icons.logout,
             title: 'Logout',
